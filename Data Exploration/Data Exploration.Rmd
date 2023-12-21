@@ -1,0 +1,662 @@
+---
+title: "Data Exploration"
+output: pdf_document
+date: "2023-10-22"
+---
+
+
+
+```{r echo=FALSE, message = FALSE}
+
+
+library(ggplot2)
+library(tidyverse)
+library(dplyr)
+library(GGally)
+library(lubridate)
+
+suppressPackageStartupMessages(library(tidyverse))
+
+setwd("X:/Coding/Rstudio/R Projects/Data 490 Model Building/Documentation")
+
+#Maryland Unemployment
+mu <- read.csv("MDUR.csv") %>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Unemployment
+  rename(Unemployment = MDUR)
+
+
+#Remove 2023 Which is NA
+mu <- mu %>%
+  filter(Year != 2023)
+
+
+#Convert column from character to numeric
+mu$Unemployment <- as.numeric(mu$Unemployment)
+
+
+#Round data to second decimal
+mu$Unemployment <- round(mu$Unemployment, digits = 2)
+
+#Maryland Labor Force
+ml <- read.csv("maryland_labor.csv") %>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Labor
+  rename(Labor = LBSSA24) 
+
+
+
+#Remove 2023 Which is NA
+ml <- ml %>%
+  filter(Year != 2023)
+
+
+#Convert column from character to numeric
+ml$Labor <- as.numeric(ml$Labor)
+
+
+
+#Round data to second decimal
+ml$Labor <- round(ml$Labor, digits = 2)
+
+#New York Unemployment
+nu <- read.csv("NYUR.csv")%>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Unemployment
+  rename(Unemployment = NYUR)
+
+#Remove 2023 Which is NA
+nu <- nu %>%
+    filter(Year != 2023)
+
+
+#Convert column from character to numeric
+nu$Unemployment <- as.numeric(nu$Unemployment)
+
+
+
+#Round data to second decimal
+nu$Unemployment <- round(nu$Unemployment, digits = 2)
+
+#New York Labor Force
+nl <- read.csv("newyork_labor.csv") %>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Labor
+  rename(Labor = LBSSA36) 
+
+#Remove 2023 Which is NA
+nl <- nl %>%
+    filter(Year != 2023)
+
+#Convert column from character to numeric
+nl$Labor <- as.numeric(nl$Labor)
+
+#Round data to second decimal
+nl$Labor <- round(nl$Labor, digits = 2)
+
+#Washington Unemployment
+wu <- read.csv("WAUR.csv")%>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Unemployment
+  rename(Unemployment = WAUR)
+
+
+#Remove 2023 Which is NA
+wu <- wu %>%
+    filter(Year != 2023)
+
+#Convert column from character to numeric
+wu$Unemployment <- as.numeric(wu$Unemployment)
+
+
+
+#Round data to second decimal
+wu$Unemployment <- round(wu$Unemployment, digits = 2)
+
+#Washington Labor Force
+wl <- read.csv("washington_labor.csv") %>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Labor
+  rename(Labor = LBSSA53) 
+
+#Remove 2023 Which is NA
+wl <- wl %>%
+   filter(Year != 2023)
+
+
+#Convert column from character to numeric
+wl$Labor <- as.numeric(wl$Labor)
+
+#Round data to second decimal
+wl$Labor <- round(wl$Labor, digits = 2)
+
+
+
+
+
+
+
+```
+
+
+
+```{r echo=FALSE}
+#Maryland
+setwd("X:/Coding/Rstudio/R Projects/Data 490 Model Building/Documentation")
+#Maryland Crime w/ Grand Total
+
+yearly_crime_m_raw <- read.csv("Maryland crime 1975-2022.csv") %>%
+
+  rename(Year = YEAR)
+
+
+yearly_crime_m <- yearly_crime_m_raw %>%
+  
+  group_by(Year) %>%
+  
+  mutate(yearly_crime = sum(GRAND.TOTAL)) 
+
+
+#Maryland Crime Only Year and Grand Total
+yearly_crime_m_clean <- yearly_crime_m[c(1:44), c(2, 39)]
+
+#Merge Unemployment with Yearly crime
+maryland <- merge(x = mu, y = yearly_crime_m_clean, by = "Year", all.y = TRUE)
+
+#Merge Labor force with Unemployment and Yearly Crime
+maryland <- merge(x = ml, y = maryland, by = "Year",
+all.y = TRUE)
+
+#Remove 1975 because it had missing data in labor and Unemployment
+maryland <- maryland[c(2:44),]
+
+
+
+```
+
+
+
+```{r echo=FALSE}
+#Washington
+setwd("X:/Coding/Rstudio/R Projects/Data 490 Model Building/Documentation")
+#Washington crime that only leaves state totals and renames columns
+yearly_crime_w_raw <- read.csv("washington_state_crime.csv") %>% 
+  
+  rename(Year = year)
+
+yearly_crime_w <- yearly_crime_w_raw %>%
+  
+  group_by(Year) %>%
+  
+  filter(county == "STATE") 
+
+
+#Create data set the contains all Data from the SRS reporting system 1990-2011
+
+yearly_crime_w_srs <- yearly_crime_w[c(1:22),c(1,22)] %>%
+    
+  rename(yearly_crime = SRS_TOTAL)
+
+#Create data set that contains all Data from the NIBRS system starting in 2012-2020  
+
+yearly_crime_w_nib <- yearly_crime_w[c(23:33),c(1,46)] %>%
+    
+rename(yearly_crime = NIB_TOTAL)
+
+#Combine both Datasets
+yearly_crime_w_clean <- rbind.data.frame(yearly_crime_w_nib,yearly_crime_w_srs)
+
+#Order Data set by Year
+yearly_crime_w_clean <- yearly_crime_w_clean[order(yearly_crime_w_clean$Year), ]
+
+
+  #Merge Unemployment with Yearly crime
+washington <- merge(x = wu, y = yearly_crime_w_clean, by = "Year", all.y = TRUE)
+
+
+#Merge Labor force with Unemployment and Yearly Crime
+washington <- merge(x = wl, y = washington, by = "Year",
+all.y = TRUE)
+
+```
+
+
+
+```{r echo=FALSE}
+
+# New York
+setwd("X:/Coding/Rstudio/R Projects/Data 490 Model Building/Documentation")
+#New York Crime w/ Grand Total
+yearly_crime_n_raw <- read.csv("new york crime.csv")
+
+yearly_crime_n <- yearly_crime_n_raw %>%
+  
+  group_by(Year) %>%
+  
+  mutate(yearly_crime = sum(Index_Count))
+  
+
+#New York Crime Only Year and Grand Total
+yearly_crime_n_clean <- yearly_crime_n[c(1:33), c(2,12)]
+
+
+
+#Merge Unemployment with Yearly crime
+newyork <- merge(x = nu, y = yearly_crime_n_clean, by = "Year", all.y = TRUE)
+
+#Merge Labor force with Unemployment and Yearly Crime
+newyork <- merge(x = nl, y = newyork, by = "Year",
+all.y = TRUE)
+
+
+
+```
+
+
+1) My problem statement for this project is, is Unemployment and Labor Force Participation a predictor of future crimes in a state? For my project I'm examining 3 different states and 9 total data sets.
+
+Maryland Unemployment Rate - MDUR.csv
+Source: https://fred.stlouisfed.org/series/MDUR
+
+Maryland Labor Force Participation - maryland_labor.csv
+Source: https://fred.stlouisfed.org/series/LBSSA24
+
+Maryland Crime Data - Maryland crime 1975-2022.csv
+Source: https://catalog.data.gov/dataset/violent-crime-property-crime-by-county-1975-to-present
+
+New York Unemployment Rate - NYUR.csv
+Source: https://fred.stlouisfed.org/series/NYUR
+
+New York Labor Force Participation - newyork_labor.csv
+Source: https://fred.stlouisfed.org/series/LBSSA36
+
+New York Crime Data - New York State Crime 1990-2022
+Source: https://catalog.data.gov/dataset/index-violent-property-and-firearm-rates-by-county-beginning-1990
+
+Washington Unemployment Rate - WAUR.csv
+Source: https://fred.stlouisfed.org/series/WAUR 
+
+Washington Labor Force Participation - washington_labor.csv
+Source: https://fred.stlouisfed.org/series/LBSSA53 
+
+Washington Crime Data - Washington state crime.csv
+Source: https://catalog.data.gov/dataset/washington-state-criminal-justice-data-book-6c019 
+
+2) For all of the Unemployment data sets for each state the data engineering process was fairly simple. I first brought in the data by reading the csv file. In the same block I also converted the Date column to only include the year. Then I renamed all of the date columns to Year. After that I renamed the column that contained unemployment data to unemployment. After that I converted the Unemployment columns to numeric and rounded them off to the second decimal place.
+
+All of the Labor force data sets had the same structure as well. I had to rename some columns and convert the labor force columns to numeric. I also rounded the percentage to the second decimal place. 
+
+For all the crime data sets I had to rename the columns that contained information to the year. Then I had to select the relevant columns from the data set. The Washington data set had over 50 columns that I had to sort through. New York and Maryland were closer to 20 rows. I kept the original datasets so that I could go back and conduct more data exploration later. 
+
+After this I combined that Unemployment, Labor Force percentage, and crime data into one data set for each state. I joined them all on the year. Finally, I combined all the datasets for all the states into one data set so I could compare them against each other. 
+
+3) For my previously submitted Data Visualizations the only feedback I got was to explain how analyzing the relationships will be useful. Other than that all my feedback was positive towards my data visualizations. 
+
+
+
+```{r echo=FALSE}
+newyork$state <- "New York"
+washington$state <- "Washington"
+maryland$state <- "Maryland"
+
+
+#Combine data sets for each state into one state
+combined_data <- rbind.data.frame(washington, maryland, newyork)
+
+write.csv(data, file = "combined_data.csv", row.names = FALSE)
+
+#1 Histogram of Crimes per year based on States
+
+ggplot(combined_data, aes(x = yearly_crime, color = state))+
+  
+  geom_histogram(binwidth = 100000)+
+  
+  labs(x = "Yearly Crime Per Year", y = "Count")+
+  
+  ggtitle("Histogram of Yearly Crime based on State") 
+
+```
+Analyzing the distribution of crimes for each state is helpful because
+it helps me visualize the trends in Crime. For example Maryland tends to have less crime each year than New York and Washington
+
+```{r echo=FALSE}
+
+#1 Density Plot of Unemployment rates based on States
+
+ggplot(combined_data, aes(x = Unemployment, color = state))+
+  geom_density(linewidth = .75)+
+  
+  labs(x = "Unemployment Rate", y = "Density")+
+  
+  ggtitle("Density Plot by State based on Unemployment")
+
+```
+
+This density plot is important because it tells me where most of the data for unemployment sits. With this I can examine if crime is consistent when the unemployment is at the same percent. This will help explain the crime and unemployment relationship
+
+```{r echo=FALSE}
+
+#1 Box plot: Crimes per Year based on State
+ggplot(combined_data, aes(x = state, y = yearly_crime))+
+  geom_boxplot()+
+  
+  scale_y_continuous(breaks = seq(0, 1137689, by = 100000))+
+  
+  labs(x = "States", y = "Crimes Commited")+
+  
+  ggtitle("Boxplot by State of Crime Per Year")
+
+```
+
+This box plot is important because it shows me outliers in the crime data. With this I go about figuring out how to address these data points and how they skew my results
+
+
+```{r echo=FALSE}
+options(scipen = 999)
+#2 Scatter Plot: Yearly crime vs Unemployment
+ library("ggplot2")
+your_plot2 <- ggplot(combined_data, aes(x = Unemployment, y = yearly_crime, color = state)) +
+  geom_point() +
+  
+  geom_smooth()+
+  
+  labs(x = "Unemployment Rate", y = "Crimes Commited")+
+  
+  ggtitle("Crimes Commited Based on Unemployment By State")
+
+
+
+```
+
+This graphic is important because it helps me visualize the relationship betwen unemployment and crime which is what my problem statement is about.
+
+```{r echo=FALSE}
+
+  options(scipen = 999)
+
+#2 Scatter plot: Yearly crime vs Labor
+your_plot3 <-  ggplot(combined_data, aes(x = Labor, y = yearly_crime, color = state)) +
+  
+  geom_point()+
+  
+  geom_smooth()+
+  
+  labs(x = "Labor Force PCT", y = "Crimes Commited")+
+  
+  ggtitle("Crimes Commited Based on Labor Force By State")
+
+
+print(your_plot3)
+
+ggsave("Your_plot3.png", plot = your_plot3, width = 6, height = 4, units = "in")
+
+```
+
+This graphic is important because it visualizes the realationship between labor force percentage and crime whic is what my problem statement is about.
+
+```{r echo=FALSE}
+
+#2 line plot of Total Crime
+
+ggplot(combined_data, aes(x = Year,))+
+  
+  geom_line( aes(y = yearly_crime, color = state),
+            linewidth = 1.2)+
+  
+  scale_y_continuous(breaks = seq(0, 1137689, by = 100000))+
+  
+  labs(x = "Year", y = "Crimes Commited")+
+  
+  ggtitle("Crimes Commited Each Year By State")
+
+```
+
+This visualization is important because it helps me understand crime trends over time. If there is a relationship between crime and labor force percentage or unemployment then they should look similar
+
+```{r echo=FALSE}
+
+png("combined parellel.png", width = 400, height = 300)
+# 3 Parallel Coordinate Plot Year, Labor, Yearly_crime
+ggparcoord(data = combined_data,
+           columns = c(1,2,3,4),
+           groupColumn = 5,
+           scale = "uniminmax",
+           showPoints = FALSE,
+           alphaLines = .5
+)+
+  
+  labs(x = "Variables", y = "Min Max Scale Based on Value")+
+  
+  ggtitle("Parallel Coordinate Plot of Year, Labor Force and Yearly crime")
+```
+
+This parallel coordinate plot is important because it helps me understand how crime relates to labor and overall trends on a state by state basis.
+
+```{r echo=FALSE}
+png("New York scatter.png", width = 800, height = 600)
+# 3 Parallel Coordinate Plot Year, Unemployment, Yearly_crime
+ggparcoord(data = combined_data,
+           columns = c(1,3,4),
+           groupColumn = 5,
+           scale = "uniminmax",
+           showPoints = FALSE,
+           alphaLines = .5) +
+  
+  labs(x = "Variables", y = "Min Max Scale Based on Value")+
+  
+  ggtitle("Parallel Coordinate Plot of Year, Unemployment and Yearly crime")
+```
+
+This parallel coordinate plot is important because it helps me understand how crime relates to unemployment on a state by state basis.
+
+```{r echo=FALSE}
+
+# 4 ScatterPlot of Crime vs Year based on Jurisdiction
+ggplot(yearly_crime_m_raw, aes(x = Year, y = GRAND.TOTAL, color = JURISDICTION)) +
+  
+  geom_point() +
+  
+  labs(x = "Year", y = "Crimes Commited") +
+  
+  ggtitle("Scatter Plot of Crime vs Year based on Jurisdiction")
+  
+```
+
+This scatter plot is important because it helps me understand that most counties experience significantly lower crime. It also helps me pick out counties that I might want examine futher.
+
+```{r }
+ png("New York scatter.png", width = 800, height = 600)
+# 4 ScatterPlot of Crime vs Year based on Jurisdiction
+ggplot(yearly_crime_n_raw, aes(x = Year, y = Index_Count, color = County)) +
+  
+  geom_point()+
+  
+  labs(x = "Year", y = "Crimes Commited")+
+  
+  ggtitle("Scatter Plot of Crime vs Year based on County")
+
+
+png("wash scatter.png", width = 400, height = 300)
+ggplot(washington, aes(x = Year, y = yearly_crime)) +
+  
+  geom_point()+
+  
+  labs(x = "Year", y = "Crimes Commited")+
+  
+  ggtitle("Scatter Plot of Crime vs Year Washington")
+
+```
+
+Similar to the last scatter plot this helps me pick which counties I need to examine further. It also important because it reminds me to examine how population might effect crime rates for each county. 
+
+
+```{r eval=FALSE, include=FALSE}
+
+
+# ScatterPlot of County vs Crime
+ggplot(new_york_crime, aes(x = `Index Count`)) +
+  
+  geom_boxplot(data = subset(new_york_crime, County == 'Kings'))+
+  
+  
+  
+  labs(x = "Population of County", y = "Crimes Commited")+
+  
+  ggtitle("Scatter Plot of Crime vs Year based on County")
+
+
+```
+
+
+```{r eval=FALSE, include=FALSE}
+
+
+# ScatterPlot of County vs Crime
+ggplot(yearly_crime_m_raw, aes(x = POPULATION, y = `GRAND.TOTAL`, color = JURISDICTION)) +
+  
+  geom_point(data = subset(yearly_crime_m_raw, POPULATION < 40000))+
+  
+  labs(x = "Population of County", y = "Crimes Commited")+
+  
+  ggtitle("Scatter Plot of Crime vs Year based on County")
+
+avg_crime_by_county <- aggregate(`Index_Count` ~ County, data = yearly_crime_n_raw, FUN = mean)
+avg_crime_by_county <- avg_crime_by_county[order(avg_crime_by_county$`Index_Count`), ]
+
+print(avg_crime_by_county)
+
+
+
+newyorkcorrelationu <- cor(newyork$Unemployment, newyork$yearly_crime)
+  
+  cat("Correlation coeffiecent:", newyorkcorrelationu, "\n")
+  
+washingtoncorrelationu <- cor(washington$Unemployment, washington$yearly_crime)
+  
+  cat("Correlation coeffiecent:", washingtoncorrelationu, "\n")
+  
+marylandcorrelationu <- cor(maryland$Unemployment, maryland$yearly_crime)
+  
+  cat("Correlation coeffiecent:", marylandcorrelationu, "\n")
+  
+newyorkcorrelationl <- cor(newyork$Labor, newyork$yearly_crime)
+  
+  cat("Correlation coeffiecent:", newyorkcorrelationl, "\n")
+  
+washingtoncorrelationl <- cor(washington$Labor, washington$yearly_crime)
+  
+  cat("Correlation coeffiecent:", washingtoncorrelationl, "\n")
+  
+marylandcorrelationl <- cor(maryland$Labor, maryland$yearly_crime)
+  
+  cat("Correlation coeffiecent:", marylandcorrelationl, "\n")
+  
+   png("larceny vs state maryland  330000 pop.png", width = 600, height = 400)
+ 
+ggplot(yearly_crime_m, aes(x = Year, y = GRAND.TOTAL, color = JURISDICTION)) +
+ 
+  geom_point(data = subset(yearly_crime_m, POPULATION < 330000))+ 
+  
+  labs(x = "Year", y = "Crimes Commited")
+
+```
+
+This visualization is important because it shows me the relationship between population and crime for counties with less than 40,000 people basis in Maryland
+
+4) The three data exploration techniques I decided to go with were Summarizing by Group, Outlier Detection, and correlation. 
+
+I picked summarizing by group rather than other exploration techniques like spatial analysis because I was more consider with the data from the counties itself rather than the actual location of the counties. With this technique I was able to see that most counties reported less than 25,000 crimes in New York and Maryland. I also found that most counties had a population under 250,000.
+
+
+I picked Outlier Detection rather than other exploration techniques because my data has so many points. I need to make sure that my visualization and conclusions are not skewed by outliers. This will improve the accuracy of my data exploration with correlation. With Outlier Section I found that Kings county in New York had four outliers in the yearly crime columns. I was also able to find more outliers in other counties. 
+
+
+And the final data exploration technique is correlations as I briefly mentioned before. I select correlation over other data exploration techniques because my project centers around the relationship between variables. And correlation is an excellent way to show that. When examining the correlation for New York between crime and unemployment as well as labor the correlation coefficient was quite low. For Washington there was a low negative correlation between crime and unemployment but for labor and crime there was a moderately high positive correlation. Maryland had a negligible correlation between unemployment and crime. But when it came to labor and crime the correlation it was moderately high and positive. 
+
+5)Summarizing by Group
+I can integrate these results into my research by separating the the counties that experience less crime from counties that experience more crime. I can also separate the counties with more than 250,000 people from the smaller ones to get more informative visualizations. Summarizing by group provided me with the insight that I might need to answer my problem statement separately for these two groups to provide an accurate answer. 
+
+
+Outlier Detection
+I will integrate these results by trimming outliers for these counties. This technique provided me with the insight that I need to deal with outliers on a county by county basis. It also provided me with the insight that I need to compare check the correlation between these outliers and their respective unemployment or labor force percentage. This could show that if there's a significant spike in crime unemployment responded similarly or differently giving insight on the relationship.
+
+Correlation
+I can integrate these results by using them to answer my problem statement. These results provided me with the insight I might need to compare unemployment and labor force on a county by county basis to see if these correlation stand up so that I can answer my problem statement more accurately.
+
+
+
+
+
+
+
+
+```{r}
+
+ggplot(yearly_crime_m, aes(x = Year, y = GRAND.TOTAL, color = JURISDICTION)) +
+  
+  geom_point(data = subset(yearly_crime_m, POPULATION < 2000000 & 350000 < POPULATION))+ 
+  
+  labs(x = "Year", y = "Crimes Commited")
+
+ png("larceny vs state maryland  330000 pop.png", width = 800, height = 600)
+ 
+ggplot(yearly_crime_m, aes(x = Year, y = GRAND.TOTAL, color = JURISDICTION)) +
+ 
+  geom_point(data = subset(yearly_crime_m, POPULATION < 330000))+ 
+  
+  labs(x = "Year", y = "Crimes Commited")
+
+
+
+ggplot(yearly_crime_m, aes(LARCENY.THEFT, JURISDICTION)) + geom_boxplot()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
