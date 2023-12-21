@@ -1,0 +1,335 @@
+---
+title: "Model Building"
+output: pdf_document
+date: "2023-11-08"
+---
+
+```{r setup, include=FALSE}
+library(modelr)
+library(tidyverse)
+library(ggplot2)
+library(GGally)
+library(dplyr)
+
+
+```
+
+
+
+####Preprocessing Data for Maryland
+```{r}
+setwd("X:/Coding/Rstudio/R Projects/Data 490 Model Building/Documentation")
+yearly_crime_m_raw <- read.csv("Maryland crime 1975-2022.csv") %>%
+
+  rename(Year = YEAR)
+
+crimeTotalm_raw <- yearly_crime_m_raw %>%
+  
+  group_by(Year) %>%
+  
+  mutate(theft_total = sum(LARCENY.THEFT)) %>%
+
+  mutate(murder_total = sum(MURDER)) %>%
+  
+  mutate(be_total = sum(B...E)) %>%
+  
+  filter(Year != 1975)
+
+#Maryland Unemployment
+mu <- read.csv("MDUR.csv") %>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Unemployment
+  rename(Unemployment = MDUR)
+
+
+#Remove 2023 Which is NA
+mu <- mu %>%
+  filter(Year != 2023)
+
+
+#Convert column from character to numeric
+mu$Unemployment <- as.numeric(mu$Unemployment)
+
+
+#Round data to second decimal
+mu$Unemployment <- round(mu$Unemployment, digits = 2)
+
+#Maryland Labor Force
+ml <- read.csv("maryland_labor.csv") %>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Labor
+  rename(Labor = LBSSA24) 
+
+
+
+#Remove 2023 Which is NA
+ml <- ml %>%
+  filter(Year != 2023)
+
+
+#Convert column from character to numeric
+ml$Labor <- as.numeric(ml$Labor)
+
+
+
+#Round data to second decimal
+ml$Labor <- round(ml$Labor, digits = 2)
+
+#Maryland Crime Only Year and Grand Total
+crimeTotalm <- crimeTotalm_raw[, c(1:3,11,39:41)]
+
+#Merge Unemployment with Yearly crime
+crimeTotalm <- merge(x = mu, y = crimeTotalm, by = "Year", all.y = TRUE)
+
+#Merge Labor force with Unemployment and Yearly Crime
+crimeTotalm <- merge(x = ml, y = crimeTotalm, by = "Year",
+all.y = TRUE)
+
+
+countylist <- unique(crimeTotalm$JURISDICTION)
+
+# Create an empty data frame to store results
+correlation_data <- data.frame(JURISDICTION = character(),
+                               correlation = numeric(),
+                               average_population = numeric(),
+                               stringsAsFactors = FALSE)
+
+for (i in seq_along(countylist)) {
+  county_data <- crimeTotalm %>%
+    filter(JURISDICTION == countylist[i])
+  
+  # Calculate correlation
+  correlation_value <- cor(county_data$Labor, county_data$GRAND.TOTAL)
+  
+  # Calculate average population
+  average_population <- mean(county_data$POPULATION)
+  
+  # Append the results to the correlation_data data frame
+  correlation_data <- bind_rows(correlation_data,
+                                 data.frame(JURISDICTION = countylist[i],
+                                            correlation = correlation_value,
+                                            average_population = average_population))
+}
+```
+
+
+
+
+
+####PCA on Summary of Maryland Counties ~ Unemployment
+```{r}
+
+selected_columns3 <- county_data[, c("Unemployment","theft_total","be_total")]
+
+
+
+# Perform PCA
+pca_result3 <- prcomp(selected_columns3, center = TRUE, scale. = TRUE)
+
+# Print summary of PCA
+summary(pca_result3)
+
+loadings3 <- pca_result3$rotation
+
+print(loadings3)
+
+
+```
+####PCA on Summary of Maryland Counties ~ Labor
+```{r}
+selected_columns4 <- county_data[, c("Labor","theft_total","be_total")]
+
+
+
+# Perform PCA
+pca_result4 <- prcomp(selected_columns4, center = TRUE, scale. = TRUE)
+
+# Print summary of PCA
+summary(pca_result4)
+
+loadings4 <- pca_result4$rotation
+
+print(loadings4)
+```
+1) My first question for this assignment was what underlying patterns can I find in my Maryland data set when examining property crimes and Socio-economic factors like Unemployment and Labor. For this I decided to use the PCA method. When I did a PCA on Labor, total theft, and breaking and entering I got an interesting result. My PC1 showed that there was seemed to be a positive relationship between labor force percentage and property crimes. At first this confused me but then I realized when labor force is low that means there are more jobs available because more people aren't working. But when labor force is high that means more people are working and thus less jobs. This could explain their positive relationship. For the PCA including Unemployment I also got interesting results. Years with a higher PC1 score were characterized by lower levels of unemployment, lower theft totals, and lower breaking and entering totals. The exact results were -0.2412024, -0.6651400, -0.7066896. This seems to show that Unemployment does have an effect on property crime. This also showed me that crimes like theft and breaking and entering have somewhat of a relationship
+
+
+
+
+
+
+####NewYork Preprocessing
+```{r}
+
+# New York
+setwd("X:/Coding/Rstudio/R Projects/Data 490 Model Building/Documentation")
+#New York Crime w/ Grand Total
+yearly_crime_n_raw <- read.csv("new york crime.csv")
+
+yearly_crime_n <- yearly_crime_n_raw %>%
+  
+  group_by(Year) %>%
+  
+  mutate(yearly_crime = sum(Index_Count))
+
+
+#New York Unemployment
+nu <- read.csv("NYUR.csv")%>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Unemployment
+  rename(Unemployment = NYUR)
+
+#Remove 2023 Which is NA
+nu <- nu %>%
+    filter(Year != 2023)
+
+
+#Convert column from character to numeric
+nu$Unemployment <- as.numeric(nu$Unemployment)
+
+
+
+#Round data to second decimal
+nu$Unemployment <- round(nu$Unemployment, digits = 2)
+
+#New York Labor Force
+nl <- read.csv("newyork_labor.csv") %>%
+  
+  #Converts the Date Column from a Date to a Year
+  mutate(DATE = year(DATE)) %>%
+  
+  #Changes the Date Column name to Year
+  rename(Year = DATE) %>%
+  
+  #Rename column to Labor
+  rename(Labor = LBSSA36) 
+
+#Remove 2023 Which is NA
+nl <- nl %>%
+    filter(Year != 2023)
+
+#Convert column from character to numeric
+nl$Labor <- as.numeric(nl$Labor)
+
+#Round data to second decimal
+nl$Labor <- round(nl$Labor, digits = 2)
+
+
+# Left join 'yearly_crime_n_raw' with 'nu' based on the 'Year' column
+yearly_crime_n_raw <- left_join(yearly_crime_n_raw, nl, by = 'Year')
+
+# Left join 'yearly_crime_n_raw' with 'nu' based on the 'Year' column
+yearly_crime_n_raw <- left_join(yearly_crime_n_raw, nu, by = 'Year')
+```
+
+
+
+```{r}
+
+
+results <- yearly_crime_n_raw %>%
+  group_by(County) %>%
+  summarize(mean_population = mean(Population)) %>%
+  arrange(desc(mean_population))
+
+
+
+summary(results)
+
+
+#Breaks the the counties into four groups 
+for( i in seq_along(results$mean_population)) {
+  if (results$mean_population[i] > 232099) {
+    
+    results$pop_group[i] = 4
+    
+  }else if(results$mean_population[i] > 91082){
+    
+    results$pop_group[i] = 3
+    
+  }else if(results$mean_population[i] > 50689){
+    
+    results$pop_group[i] = 2
+    
+  }else if(results$mean_population[i] <= 50689 ){
+    
+    results$pop_group[i] = 1}
+}
+
+# Merge the two data frames on the 'County' column
+merged_data <- merge(yearly_crime_n_raw, results[, c('County', 'pop_group')], by = 'County', all.x = TRUE)
+
+# Print the merged data frame
+print(merged_data)
+
+
+
+```
+
+
+
+```{r}
+pop_groups <- unique(merged_data$pop_group)
+
+# Create an empty list to store regression models
+regression_models <- list()
+
+# Iterate through each population group and fit a linear regression model
+for (group in pop_groups) {
+  subset_data <- filter(merged_data, pop_group == group)
+  model <- lm(Index_Count ~ Unemployment + Labor, data = subset_data)
+  regression_models[[group]] <- model
+  
+  # Print summary for each model with the corresponding group
+  cat("Summary for", group, ":\n")
+  print(summary(model))
+  cat("\n")
+}
+
+count_by_pop_group <- table(results$pop_group)
+print(count_by_pop_group)
+
+```
+
+2) The second question I'm trying to answer is if the population of a county affects the ability to predict crime based on Unemployment and Labor force through regression. After separating the county's of New York into four groups based on population I then ran a linear regression model for each. All of the pop groups indicated that Unemployment and Labor had a statistically significant association with Index_Count. But only group two had an R-Squared Value that indicated the results moderately explained the variability in the response. The rest had R-Squared values that explained a relatively low proportion of the variability. And there was an even distribution in all of the population groups so not as to skew the results. This shows me that there was some affect on predicting crime when group county's into population groups.
+
+```{r}
+
+
+
+ny_violent <- lm(Violent.Count ~ Unemployment + Labor + Population, data = yearly_crime_n_raw)
+ny_property <- lm(Property.Count ~ Unemployment + Labor + Population, data = yearly_crime_n_raw)
+
+ny_all <- lm(Index_Count ~ Unemployment + Labor + Population, data = yearly_crime_n_raw)
+
+summary(ny_violent)
+summary(ny_property)
+summary(ny_all)
+
+```
+
+3) The last question that I wanted to answer is if labor force/unemployment can predict certain types of crime better than crime overall. When I test a regression method on violent crime in New York the results were rather lack luster and it was not a good fit. But when I attempted to predict Property crime unemployment and labor force were statistically significant. Though these two values don't explain the variability I believe that the different counties would. But in the end the regression was able to predict overall crime better. 
+  When I added population into the mix though it changed the results remarkably. Both Property crime and overall crime had very similar coefficients. But both models were able to account for roughly 65% of the variability in the data. Which immense compared to before. This will help me understand the relationship between socio economic factors, population, and crime better.
+
+
+
+
+
